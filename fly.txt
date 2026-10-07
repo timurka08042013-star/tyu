@@ -1,0 +1,95 @@
+-- [SWILL] Быстрый Fly Script (максимально простой)
+-- Кнопка X - включить/выключить
+-- WASD - движение
+-- Space - вверх
+-- LeftCtrl - вниз
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Настройки
+local FLY_SPEED = 150  -- Максимальная скорость (рекомендуется 100-200)
+local TOGGLE_KEY = "X" -- Кнопка включения/выключения
+
+-- Создаем BodyVelocity для полёта
+local bodyVelocity = Instance.new("BodyVelocity")
+bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+bodyVelocity.Name = "FlyVelocity_" .. math.random(1000, 9999)
+
+-- Функция включения/выключения полёта
+local flying = false
+local function toggleFly()
+    flying = not flying
+
+    if flying then
+        bodyVelocity.Parent = rootPart
+        humanoid.PlatformStand = true
+    else
+        bodyVelocity.Parent = nil
+        humanoid.PlatformStand = false
+    end
+end
+
+-- Обработка нажатия кнопки X
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode[TOGGLE_KEY] then
+        toggleFly()
+    end
+end)
+
+-- Обновление движения в полёте
+RunService.Heartbeat:Connect(function()
+    if flying and rootPart then
+        local direction = Vector3.new(0, 0, 0)
+        local camera = workspace.CurrentCamera
+        local cameraCFrame = camera.CFrame
+
+        -- WASD управление
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            direction = direction + (cameraCFrame.LookVector * FLY_SPEED)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            direction = direction - (cameraCFrame.LookVector * FLY_SPEED)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            direction = direction - (cameraCFrame.RightVector * FLY_SPEED)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            direction = direction + (cameraCFrame.RightVector * FLY_SPEED)
+        end
+
+        -- Вверх/вниз
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            direction = direction + (Vector3.new(0, FLY_SPEED, 0))
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            direction = direction - (Vector3.new(0, FLY_SPEED, 0))
+        end
+
+        -- Защита от анти-чита (рандомизация скорости)
+        direction = direction + Vector3.new(
+            math.random(-1, 1) * 0.1,
+            math.random(-1, 1) * 0.1,
+            math.random(-1, 1) * 0.1
+        )
+
+        bodyVelocity.Velocity = direction
+    end
+end)
+
+-- Перезапуск при респавне
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    humanoid = character:WaitForChild("Humanoid")
+    rootPart = character:WaitForChild("HumanoidRootPart")
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Name = "FlyVelocity_" .. math.random(1000, 9999)
+end)
